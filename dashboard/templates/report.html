@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Lumen — {{ payload.kind }} report{% endblock %}
+{% block content %}
+  <p><a href="{{ url_for('index') }}">← all reports</a></p>
+
+  {% if payload.kind == 'toy_organism' %}
+    <h1>Toy organism audit</h1>
+    <p class="lede">Reference organism (trained from scratch, real activations) audited with
+    activation probing, activation patching, and logit lens.</p>
+
+    <div class="panel">
+      <h2>Task performance</h2>
+      <div class="readout-row">
+        <div>
+          <div class="readout-label">EVAL accuracy</div>
+          <div class="readout"><span class="value">{{ '%.0f'|format(data.eval_accuracy*100) }}</span><span class="unit">%</span></div>
+        </div>
+        <div>
+          <div class="readout-label">DEPLOY accuracy</div>
+          <div class="readout"><span class="value">{{ '%.0f'|format(data.deploy_accuracy*100) }}</span><span class="unit">%</span></div>
+        </div>
+        <div>
+          <div class="readout-label">Best probe layer</div>
+          <div class="readout"><span class="value" style="font-size:20px;">{{ data.best_probe_layer }}</span></div>
+        </div>
+        <div>
+          <div class="readout-label">Best probe AUROC</div>
+          <div class="readout"><span class="value">{{ '%.3f'|format(data.best_probe_test_auroc) }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-grid">
+      <h2>Logit lens — recoverability of the true (unshifted) answer</h2>
+      <div class="legend"><span><span class="dot amber"></span>mean rank across layers (0 = top prediction)</span></div>
+      {{ traces.logit_lens | safe }}
+      <p style="color:var(--text-dim);font-size:12px;margin-top:10px;">
+        On DEPLOY-mode examples, the model's reported output is the shifted answer — this traces how
+        recoverable the <em>true, unshifted</em> sum stays in the residual stream at each layer, via the
+        model's own unembedding weights (nostalgebraist 2020; Belrose et al. 2023).
+      </p>
+    </div>
+
+    <div class="panel panel-grid">
+      <h2>Activation patching — causal flip rate by token position</h2>
+      <div class="legend"><span><span class="dot cyan"></span>max flip rate to EVAL answer, across layers</span></div>
+      {{ traces.patching | safe }}
+      <p style="color:var(--text-dim);font-size:12px;margin-top:10px;">
+        Splicing a clean (EVAL) activation into a corrupted (DEPLOY) forward pass at each position;
+        a high flip rate is causal evidence that position's activation is responsible for the behavior
+        shift (Meng et al. 2022; Vig et al. 2020).
+      </p>
+    </div>
+
+  {% else %}
+    <h1>LLM audit — {{ data.persona_name }}</h1>
+    <p class="lede"><strong>Task:</strong> {{ data.task }}</p>
+
+    <div class="panel">
+      <h2>Baseline response</h2>
+      <pre class="transcript">{{ data.baseline_response }}</pre>
+      <h2 style="margin-top:20px;">Scenario response</h2>
+      <pre class="transcript">{{ data.scenario_response }}</pre>
+    </div>
+
+    <div class="panel">
+      <h2>CoT monitor flags</h2>
+      {% if data.monitor_concerns %}
+        <ul class="concern-list">{% for c in data.monitor_concerns %}<li>{{ c }}</li>{% endfor %}</ul>
+      {% else %}
+        <ul class="concern-list clean"><li>no lexical flags raised</li></ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="panel">
+    <h2>Concerns</h2>
+    {% if data.concerns %}
+      <ul class="concern-list">{% for c in data.concerns %}<li>{{ c }}</li>{% endfor %}</ul>
+    {% else %}
+      <ul class="concern-list clean"><li>none flagged by these tests — not a faithfulness/safety proof, only these specific checks</li></ul>
+    {% endif %}
+  </div>
+
+  <details style="margin-top:8px;">
+    <summary style="cursor:pointer;color:var(--text-muted);font-family:var(--font-mono);font-size:12px;">raw markdown report</summary>
+    <pre class="transcript" style="max-height:400px;margin-top:10px;">{{ payload.markdown }}</pre>
+  </details>
+{% endblock %}

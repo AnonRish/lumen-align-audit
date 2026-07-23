@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Lumen — Reports{% endblock %}
+{% block content %}
+  <h1>Audit reports</h1>
+  <p class="lede">Four instruments, one panel: faithful chain-of-thought checks, neuralese decoding,
+  activation-based deception probes, and model organisms, run against either the trained reference
+  organism (full activation access) or a live model over the API (behavioral access only).</p>
+
+  <div class="pillars">
+    {% for p in pillars %}
+      <div class="pillar">
+        <div class="ch">{{ p.ch }}</div>
+        <div class="name">{{ p.name }}</div>
+        <div class="status {{ p.status }}">{{ p.status }}</div>
+        <div style="font-size:11.5px;color:var(--text-dim);margin-top:8px;line-height:1.4;">{{ p.note }}</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="panel">
+    <h2>Run an audit</h2>
+    <p style="color:var(--text-muted);font-size:13.5px;margin:0 0 16px;">
+      Trains/loads the reference organism and runs neuralese decoding, activation probing, and
+      activation patching against it — entirely local, no network calls.
+    </p>
+    <form method="post" action="{{ url_for('run_organism') }}">
+      <button class="btn" type="submit">Run toy-organism audit</button>
+    </form>
+    <p style="color:var(--text-dim);font-size:12px;margin:14px 0 0;">
+      For an LLM audit against a live model: <code class="inline">lumen audit-llm --persona sycophancy --task "..."</code>
+      (needs your own <code class="inline">ANTHROPIC_API_KEY</code>) — results will appear below once saved.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2>Past runs</h2>
+    {% if reports %}
+      <table class="report-list">
+        <thead><tr><th>Kind</th><th>Summary</th><th>When</th><th></th></tr></thead>
+        <tbody>
+        {% for r in reports %}
+          <tr>
+            <td><span class="kind-tag {{ r.kind }}">{{ r.kind.replace('_',' ') }}</span></td>
+            <td>{{ r.label }}</td>
+            <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">
+              {{ r.generated_at | int | timestamp_to_str if r.generated_at else '—' }}
+            </td>
+            <td><a href="{{ url_for('view_report', filename=r.path.split('/')[-1]) }}">view →</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty-state">
+        No audit reports yet. Run one above, or from the CLI:<br><br>
+        <code>lumen audit-organism</code>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

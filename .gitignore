@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+audit_reports/
+*.npz
+!checkpoints/reference_organism.npz
+.DS_Store
+*.log
+.coverage
+htmlcov/

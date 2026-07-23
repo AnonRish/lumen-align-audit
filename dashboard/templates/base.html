@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Lumen{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="nameplate">
+    <span class="mark">LUMEN</span>
+    <span class="tagline">alignment &amp; interpretability audit instrument</span>
+    <nav>
+      <a href="{{ url_for('index') }}">reports</a>
+      <a href="https://ai-2040.com/supplements/alignment-roadmap">plan a roadmap ↗</a>
+      <a href="https://github.com/" title="update this link to your repo">source ↗</a>
+    </nav>
+  </div>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>lumen · built against the AI 2040 Plan A alignment roadmap · see STATUS.md for what's tested vs. scaffolded</footer>
+</body>
+</html>

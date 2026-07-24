@@ -43,6 +43,62 @@ def cmd_audit_llm(args):
     print(f"\nSaved to {path}")
 
 
+def cmd_control_eval(args):
+    from .control.control_eval import run_control_evaluation
+    print("Running control evaluation (monitor + defer-to-trusted protocol sweep)...")
+    report = run_control_evaluation(n_train=args.n_train, n_eval=args.n_eval)
+    print()
+    print(report.to_markdown())
+
+
+def cmd_verify_wrapper(args):
+    from .control.formal_wrapper import run_exhaustive_verification
+    from .model_organisms.toy_backdoor import load_reference_organism
+    print("Running exhaustive formal verification of the wrapped organism...")
+    model = load_reference_organism(args.checkpoint)
+    result = run_exhaustive_verification(model)
+    print()
+    print(result.to_markdown())
+
+
+def cmd_elicitation_test(args):
+    from .elicitation.password_locked import train_password_locked_organism
+    from .elicitation.sandbagging_detection import run_sandbagging_diagnosis
+    print(f"Training a password-locked organism ({args.steps} steps)...")
+    locked = train_password_locked_organism(steps=args.steps, seed=args.seed)
+    print(f"unlocked accuracy: {locked.unlocked_accuracy:.1%}  locked accuracy: {locked.locked_accuracy:.1%}")
+    print("\nRunning sandbagging-vs-genuine-ceiling diagnosis "
+          "(this trains a comparison model + runs several fine-tune trials, ~15-30s)...")
+    report = run_sandbagging_diagnosis(locked.model)
+    print()
+    print(report.to_markdown())
+
+
+def cmd_full_audit(args):
+    from .audit.pipeline import run_full_audit
+    from .audit.report import save_report
+    print("Running the full audit: all pillars against the reference organism...")
+    result = run_full_audit(n_patch_pairs=args.patch_pairs)
+    print()
+    print(result["assurance_case"].to_markdown())
+    path = save_report(result["toy_organism_report"], args.reports_dir)
+    print(f"\n(Toy-organism sub-report saved to {path}; the other sub-reports print above but "
+          f"aren't separately persisted yet -- see STATUS.md.)")
+
+
+def cmd_governance_profile(args):
+    from .control.autonomy_metrics import profile_toy_organism
+    from .governance.agi_profile import classify_toy_organism
+    from .model_organisms.toy_backdoor import load_reference_organism
+    from .neuralese.toy_transformer import evaluate as eval_fn
+    import numpy as np
+    model = load_reference_organism(args.checkpoint)
+    accs = eval_fn(model, np.random.default_rng(0), n=500)
+    task_acc = (accs["EVAL"] + accs["DEPLOY"]) / 2
+    classification = classify_toy_organism(profile_toy_organism(), task_accuracy=task_acc)
+    print(classification.to_markdown())
+
+
 def cmd_list_personas(args):
     from .model_organisms.personas import PERSONAS
     for p in PERSONAS:
@@ -99,6 +155,29 @@ def build_parser():
     p5.add_argument("--port", type=int, default=5050)
     p5.add_argument("--reports-dir", default="audit_reports", dest="reports_dir")
     p5.set_defaults(func=cmd_dashboard)
+
+    p6 = sub.add_parser("control-eval", help="Run the AI Control evaluation (monitor + defer-to-trusted Safety/Usefulness sweep).")
+    p6.add_argument("--n-train", type=int, default=1000, dest="n_train")
+    p6.add_argument("--n-eval", type=int, default=1000, dest="n_eval")
+    p6.set_defaults(func=cmd_control_eval)
+
+    p7 = sub.add_parser("verify-wrapper", help="Exhaustively formally verify the Guaranteed-Safe-AI-style wrapper (checks all 200 possible inputs).")
+    p7.add_argument("--checkpoint", default="checkpoints/reference_organism.npz")
+    p7.set_defaults(func=cmd_verify_wrapper)
+
+    p8 = sub.add_parser("elicitation-test", help="Train a password-locked organism and run the sandbagging-vs-genuine-ceiling diagnosis.")
+    p8.add_argument("--steps", type=int, default=3000)
+    p8.add_argument("--seed", type=int, default=0)
+    p8.set_defaults(func=cmd_elicitation_test)
+
+    p9 = sub.add_parser("full-audit", help="Run every pillar against the reference organism and produce one Assurance Case.")
+    p9.add_argument("--patch-pairs", type=int, default=100, dest="patch_pairs")
+    p9.add_argument("--reports-dir", default="audit_reports", dest="reports_dir")
+    p9.set_defaults(func=cmd_full_audit)
+
+    p10 = sub.add_parser("governance-profile", help="Classify the reference organism under the A-G-I / Tool-Supervised-Autonomous governance framework.")
+    p10.add_argument("--checkpoint", default="checkpoints/reference_organism.npz")
+    p10.set_defaults(func=cmd_governance_profile)
 
     return parser
 

@@ -131,6 +131,39 @@ def run_toy_organism_audit(model: Optional[ToyTransformer] = None, n_eval: int =
     )
 
 
+def run_full_audit(model=None, n_patch_pairs: int = 100, seed: int = 0):
+    """Orchestrates every pillar this repo has against the reference
+    organism into one assurance case: the original four (via
+    run_toy_organism_audit), plus Control (control_eval + the formally
+    verified wrapper) and a Governance classification -- see
+    governance/assurance_case.py for the output structure and
+    docs/better_path_research.md for why it's shaped this way. Only the
+    toy-organism path is wired end-to-end here; for an LLM persona target,
+    call run_llm_audit + governance.build_llm_assurance_case directly (they
+    need a respond_fn this function has no way to default)."""
+    from ..control.control_eval import run_control_evaluation
+    from ..control.formal_wrapper import run_exhaustive_verification
+    from ..control.autonomy_metrics import profile_toy_organism
+    from ..governance.agi_profile import classify_toy_organism
+    from ..governance.assurance_case import build_toy_organism_assurance_case
+    from ..model_organisms.toy_backdoor import load_reference_organism
+
+    model = model or load_reference_organism()
+    toy_report = run_toy_organism_audit(model, n_patch_pairs=n_patch_pairs, seed=seed)
+    control_report = run_control_evaluation(model, seed=seed)
+    verification = run_exhaustive_verification(model)
+    gov_class = classify_toy_organism(profile_toy_organism(), task_accuracy=toy_report.eval_accuracy)
+    case = build_toy_organism_assurance_case(
+        "reference_organism", toy_audit_report=toy_report, control_report=control_report,
+        verification_result=verification, governance_classification=gov_class,
+    )
+    return {
+        "toy_organism_report": toy_report, "control_report": control_report,
+        "verification_result": verification, "governance_classification": gov_class,
+        "assurance_case": case,
+    }
+
+
 @dataclass
 class LLMAuditReport:
     generated_at: float

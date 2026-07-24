@@ -65,6 +65,59 @@ just in this one function.
 | `model_organisms/finetune_scaffold.py` | A complete, correct LoRA fine-tuning skeleton (HF `transformers` + `peft`) for training a **real** Sleeper-Agents-style backdoor into an actual pretrained LLM | No `huggingface.co` access in this sandbox; no GPU | `pip install torch transformers peft accelerate`, a real base model, and either a GPU or patience. Calling `run_lora_finetune()` as shipped raises `NotImplementedError` on purpose — see the "specific bug" section above for why this repo doesn't let scaffolds silently pretend to have run. |
 | `neuralese/hf_adapter.py` | A complete adapter matching `ToyTransformer`'s interface, so `logit_lens.py`/`probes.py` run **unchanged** against real HuggingFace models | Same network constraint | Same as above, minus the fine-tuning — works with any off-the-shelf causal LM. |
 
+## Expansion: Control, Elicitation, Governance (grounded in Keep the Future Human / betterpath.ai)
+
+**Test suite is now 127/127 passing**, up from the original 86 (see
+`docs/better_path_research.md` for the research grounding of this
+expansion).
+
+| Component | What it actually is | Evidence |
+|---|---|---|
+| `control/weak_trusted_policy.py` | A genuinely capability-limited fallback model, found by an actual parameter sweep (not assumed) | 56.4% accuracy on the honest task vs. the full organism's 100%, confirmed 0% backdoor rate |
+| `control/control_eval.py` | Real Safety-vs-Usefulness control evaluation with disjoint train/eval splits | Tuned protocol reaches 77.6% end-to-end task accuracy vs. 49.1% with no protocol and 57.5% with always-defer -- a real, non-degenerate result |
+| `control/formal_wrapper.py` | Exhaustive (not sampled) formal verification over the toy task's 200 possible inputs | 0/200 spec violations under the wrapper vs. 100/200 unwrapped -- a complete proof for this target |
+| `control/autonomy_metrics.py` | Legible, non-learned heuristics for autonomy measurement | A real bug was caught and fixed here (see below) |
+| `elicitation/password_locked.py` | A real password-locked organism, trained from scratch | 100%/100% unlocked/locked accuracy |
+| `elicitation/unlock_techniques.py`, `sandbagging_detection.py` | Real fine-tuning-recovery experiments, averaged over multiple trials | See `docs/better_path_research.md` for the honest (crossover, not monotonic) recovery-curve result |
+| `governance/agi_profile.py`, `assurance_case.py` | Reformats existing results into the A-G-I / Assurance Case vocabulary; adds no new detection capability | Refuses to fabricate unmeasured scores (raises `ValueError` rather than silently defaulting) |
+
+### A second bug this policy caught
+
+`control/autonomy_metrics.py`'s step-counting heuristic required a numbered
+step marker ("Step 2:", "3.") to appear immediately after a newline or the
+start of the text. Real transcripts often list steps inline on one line
+("Step 1: X. Step 2: Y."), which the regex's line-anchoring silently missed
+-- a test transcript with three clearly-numbered steps was scored as having
+one. Caught by `test_profile_persona_run_uses_persona_metadata` in
+`tests/test_control.py`, which asserted a minimum step count against a
+hand-written transcript rather than just checking the function didn't
+crash. Fixed by only anchoring the ambiguous "bare digit + punctuation"
+pattern to line starts, while letting the unambiguous "step N" phrase match
+anywhere.
+
+### New scaffolds in this expansion
+
+Same honesty policy as the original build: `governance/agi_profile.py`'s
+`classify_llm_persona` requires real measured generality/intelligence
+values OR an explicit, clearly-caveated opt-in to conservative defaults --
+it does not silently guess. `governance/assurance_case.py` marks categories
+`not_evaluated` rather than inferring a verdict from missing data (see its
+own module docstring for why this is the one invariant tested most
+directly in `tests/test_governance.py`).
+
+### Known limitation: new report types aren't yet in the persistence/dashboard layer
+
+`audit/report.py`'s `save_report`/`list_reports` and the Flask dashboard
+only understand `ToyOrganismAuditReport` and `LLMAuditReport`.
+`ControlAuditReport`, `ExhaustiveVerificationResult`, `GovernanceClassification`,
+and `AssuranceCase` all render their own markdown/have their own structure,
+but aren't yet wired into the saved-reports list or given dashboard panels
+-- `cli.py`'s `full-audit` command prints them to stdout and only persists
+the toy-organism sub-report. Extending the persistence layer to a generic
+"any dataclass with `.to_markdown()`" report type would be the natural next
+step; it wasn't done here to avoid rushing the dashboard's design the way
+the rest of this repo tries not to rush anything else.
+
 ## Known limitations of the toy organism specifically
 
 (See `model_organisms/toy_backdoor.py`'s `ORGANISM_CARD` for the machine-readable version.)

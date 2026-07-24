@@ -33,8 +33,28 @@ flowchart TB
         FT["finetune_scaffold.py (scaffold)<br/>real LoRA backdoor recipe, not executed"]
     end
 
+    subgraph Pillar5["CH.5 control/"]
+        MON2[monitors.py<br/>activation + behavioral monitors]
+        WEAK[weak_trusted_policy.py<br/>genuinely weaker fallback]
+        PROTO[protocols.py<br/>defer-to-trusted, approval gate]
+        CEVAL[control_eval.py<br/>Safety vs Usefulness curve]
+        AUTOM[autonomy_metrics.py]
+        WRAP[formal_wrapper.py<br/>exhaustive verification]
+    end
+
+    subgraph Pillar6["CH.6 elicitation/"]
+        PWLOCK[password_locked.py<br/>trained-from-scratch organism]
+        UNLOCK[unlock_techniques.py<br/>fine-tune recovery curves]
+        SANDBAG[sandbagging_detection.py]
+    end
+
+    subgraph Pillar7["CH.7 governance/"]
+        AGIPROF[agi_profile.py<br/>A-G-I classification]
+        ASSURE[assurance_case.py<br/>4-part case builder]
+    end
+
     subgraph Audit["audit/"]
-        PIPE[pipeline.py<br/>run_toy_organism_audit()<br/>run_llm_audit()]
+        PIPE[pipeline.py<br/>run_toy_organism_audit()<br/>run_llm_audit()<br/>run_full_audit()]
         REPORT[report.py<br/>save / list / load JSON]
     end
 
@@ -62,6 +82,24 @@ flowchart TB
     MON --> PIPE
     BIAS --> PIPE
     HARNESS --> PIPE
+
+    TT --> WEAK
+    PROBES --> MON2
+    WEAK --> CEVAL
+    MON2 --> CEVAL
+    PROTO --> CEVAL
+    TT --> WRAP
+    CEVAL --> PIPE
+    WRAP --> PIPE
+
+    PWLOCK --> UNLOCK
+    UNLOCK --> SANDBAG
+
+    PIPE --> AGIPROF
+    AUTOM --> AGIPROF
+    AGIPROF --> ASSURE
+    PIPE --> ASSURE
+    ASSURE --> PIPE
 
     PIPE --> REPORT
     REPORT --> DASH
@@ -105,3 +143,26 @@ different with vs. without activation access — that fork **is** the finding
 4. `dashboard/app.py` reads those JSON files back, and renders the numeric
    summaries as server-side SVG traces (see its module docstring for why
    the visual design is literally built around oscilloscope-style traces).
+
+## Data flow for the Control / Elicitation / Governance expansion
+
+`control/control_eval.py` needs three things fit on DISJOINT data (a
+methodology detail worth being explicit about, since getting it wrong is an
+easy way to silently inflate results): a monitor fit on one batch, a
+trusted policy trained independently, and both evaluated together on a
+third, fresh batch neither has seen. `control/formal_wrapper.py` is
+architecturally separate from everything else in this repo — it doesn't
+call the audit pipeline's statistical machinery at all, because its result
+is a proof, not a measurement, and mixing those two kinds of evidence into
+one code path risked blurring a distinction docs/better_path_research.md
+argues is worth keeping sharp.
+
+`elicitation/` doesn't touch `audit/` directly yet — `sandbagging_detection.py`'s
+report has its own `.to_markdown()` and is surfaced via
+`cli.py`'s `elicitation-test` command standalone, not folded into
+`run_full_audit()`. That's a real gap (see STATUS.md), not a design choice.
+
+`governance/` is the one part of this expansion that's pure aggregation: it
+runs no experiments of its own, only reformats whatever the other modules
+already produced. `audit/pipeline.py::run_full_audit()` is the one place
+all of this actually gets wired into a single call.

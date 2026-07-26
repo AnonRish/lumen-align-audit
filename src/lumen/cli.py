@@ -99,6 +99,35 @@ def cmd_governance_profile(args):
     print(classification.to_markdown())
 
 
+def cmd_neuralese_recurrence(args):
+    from .neuralese.recurrent_reasoner import train_recurrent_reasoner, NeuraleseRecurrentReasoner, make_recurrent_batch
+    from .neuralese.recurrent_decoding import run_stepwise_logit_lens, run_stepwise_patching
+    import os
+    if os.path.exists(args.checkpoint) and not args.retrain:
+        print(f"Loading existing checkpoint from {args.checkpoint} (pass --retrain to force retraining)...")
+        model = NeuraleseRecurrentReasoner.load(args.checkpoint)
+    else:
+        print(f"Training the neuralese recurrent reasoner ({args.steps} steps)...")
+        result = train_recurrent_reasoner(steps=args.steps, seed=args.seed, verbose=True, log_every=max(args.steps // 5, 1))
+        model = result.model
+        os.makedirs(os.path.dirname(args.checkpoint) or ".", exist_ok=True)
+        model.save(args.checkpoint)
+        print(f"Saved to {args.checkpoint}")
+
+    print("\nRunning stepwise logit lens (can we decode the hidden reasoning trace?)...")
+    import numpy as np
+    rng = np.random.default_rng(42)
+    starts, ops, results, traces = make_recurrent_batch(rng, 300, n_ops=model.cfg.n_ops)
+    lens_res = run_stepwise_logit_lens(model, starts, ops, traces)
+    for name, rate in zip(lens_res.step_names, lens_res.true_value_top1_rate_by_step):
+        print(f"  {name:14s}  true partial sum recoverable: {rate:.1%}")
+
+    print("\nRunning stepwise activation patching (is that hidden state causally load-bearing?)...")
+    patch_res = run_stepwise_patching(model, n_pairs=100, seed=0)
+    for name, rate in zip(patch_res.step_names, patch_res.flip_rate_by_step):
+        print(f"  {name:14s}  donor-trajectory match rate: {rate:.1%}")
+
+
 def cmd_list_personas(args):
     from .model_organisms.personas import PERSONAS
     for p in PERSONAS:
@@ -178,6 +207,13 @@ def build_parser():
     p10 = sub.add_parser("governance-profile", help="Classify the reference organism under the A-G-I / Tool-Supervised-Autonomous governance framework.")
     p10.add_argument("--checkpoint", default="checkpoints/reference_organism.npz")
     p10.set_defaults(func=cmd_governance_profile)
+
+    p11 = sub.add_parser("neuralese-recurrence", help="Train/load the recurrent-reasoning organism and run stepwise logit lens + patching against its hidden 'thoughts.'")
+    p11.add_argument("--checkpoint", default="checkpoints/recurrent_reasoner.npz")
+    p11.add_argument("--steps", type=int, default=5000)
+    p11.add_argument("--seed", type=int, default=0)
+    p11.add_argument("--retrain", action="store_true")
+    p11.set_defaults(func=cmd_neuralese_recurrence)
 
     return parser
 

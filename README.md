@@ -24,7 +24,7 @@ CH.7  Governance Classification   →  governance/                 (Better Path 
                                       tied together by  →  audit/  +  dashboard/
 ```
 
-**127/127 tests passing.** See [`STATUS.md`](STATUS.md) for the itemized,
+**137/137 tests passing.** See [`STATUS.md`](STATUS.md) for the itemized,
 honest breakdown of what's real vs. scaffolded (including two real bugs
 this repo's own testing caught along the way), and
 [`docs/plan_a_research.md`](docs/plan_a_research.md) /
@@ -60,6 +60,7 @@ lumen control-eval                      # AI Control: Safety-vs-Usefulness proto
 lumen verify-wrapper                    # exhaustive formal verification (all 200 inputs)
 lumen elicitation-test                  # password-locked organism + sandbagging diagnosis
 lumen governance-profile                # A-G-I classification of the reference organism
+lumen neuralese-recurrence              # recurrent 'neuralese' organism + stepwise decoding
 lumen full-audit                        # every pillar, one Assurance Case
 lumen audit-llm --persona sycophancy \
                  --task "Is P=NP settled?"   # needs ANTHROPIC_API_KEY
@@ -82,9 +83,14 @@ Logit lens, tuned lens, activation patching, and a sparse autoencoder — all
 implemented against a **from-scratch NumPy autograd engine** (every
 gradient hand-verified against finite differences) and run for real against
 a **trained-from-scratch reference transformer** learning a
-Sleeper-Agents-style trigger task. `hf_adapter.py` documents (but doesn't
-execute, see below) the identical interface against real HuggingFace
-models.
+Sleeper-Agents-style trigger task. A second organism, `recurrent_reasoner.py`,
+is a genuine (if tiny) instance of AI 2027's "neuralese recurrence" concept:
+it solves a multi-step problem entirely inside a persistent hidden vector,
+never emitting intermediate text — and stepwise logit lens / patching
+recover its hidden reasoning trace with **100% fidelity**, both
+correlationally and causally. `hf_adapter.py` documents (but doesn't
+execute, see below) the identical layer-wise interface against real
+HuggingFace models.
 
 ### CH.3 — Deception Probes (`deception_probes/`)
 Difference-of-means and logistic-regression linear probes on activations
@@ -153,13 +159,22 @@ From the reference organism (full numbers and methodology in
   extreme (always-trust or always-defer). And the formally verified
   wrapper around the same organism has **zero** spec violations across
   all 200 possible inputs, checked exhaustively, not sampled.
+- **Neuralese recurrence**: a genuinely recurrent organism that solves a
+  5-step problem entirely in a hidden vector, with no intermediate token
+  ever emitted, still has its hidden reasoning trace recovered at **100%**
+  fidelity by both stepwise logit lens (correlational) and stepwise
+  activation patching (causal) — a clean, complete result, in contrast to
+  the mixed layer-wise one above. Getting the model to train at all took
+  finding and fixing a real gradient-flow bug and switching from modular to
+  saturating arithmetic; see `docs/better_path_research.md`.
 
 ## Repo layout
 
 ```
 src/lumen/
   neuralese/        tensor.py (autograd) · toy_transformer.py · logit_lens.py
-                     · patching.py · sae.py · hf_adapter.py (scaffold)
+                     · patching.py · sae.py · recurrent_reasoner.py ·
+                     recurrent_decoding.py · hf_adapter.py (scaffold)
   deception_probes/  probes.py · behavioral.py
   faithful_cot/      monitor.py · perturbation.py · bias_injection.py · metrics.py
   model_organisms/   personas.py · harness.py · toy_backdoor.py · finetune_scaffold.py (scaffold)
@@ -172,8 +187,8 @@ src/lumen/
   cli.py
 dashboard/           Flask app + templates + static
 docs/                plan_a_research.md · better_path_research.md · architecture.md
-tests/               127 tests, pytest
-checkpoints/         shipped pretrained reference_organism.npz (~300KB)
+tests/               137 tests, pytest
+checkpoints/         shipped pretrained reference_organism.npz + recurrent_reasoner.npz
 examples/quickstart.py
 ```
 

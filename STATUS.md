@@ -67,7 +67,7 @@ just in this one function.
 
 ## Expansion: Control, Elicitation, Governance (grounded in Keep the Future Human / betterpath.ai)
 
-**Test suite is now 127/127 passing**, up from the original 86 (see
+**Test suite is now 137/137 passing**, up from the original 86 (see
 `docs/better_path_research.md` for the research grounding of this
 expansion).
 
@@ -117,6 +117,55 @@ the toy-organism sub-report. Extending the persistence layer to a generic
 "any dataclass with `.to_markdown()`" report type would be the natural next
 step; it wasn't done here to avoid rushing the dashboard's design the way
 the rest of this repo tries not to rush anything else.
+
+## Expansion: Neuralese Recurrence (a second model organism for CH.2)
+
+**Test suite is now 137/137 passing**, up from 127.
+
+`neuralese/recurrent_reasoner.py` is a second, genuinely different organism
+from `toy_backdoor.py`: instead of one forward pass, it solves a 5-step
+problem (a starting digit plus 4 saturating ADD/SUB operations) entirely
+inside a persistent hidden "thought" vector, updated once per operation,
+with no intermediate value ever emitted as a token -- a real, if tiny,
+instance of AI 2027's "neuralese recurrence" concept, built specifically to
+give the existing decoding tools a genuinely recurrent target.
+
+### Two real problems on the way to a working version, both left documented rather than quietly fixed
+
+1. **A real gradient-flow bug.** The first version zero-initialized the
+   recurrent update layer's weights directly (intending an identity-start
+   trick). Direct gradient-norm inspection showed this silently zeroed the
+   gradient for everything upstream of that layer, including the operation
+   embeddings -- the model could not learn to represent operations AT ALL
+   under that scheme, no matter how long it trained. Fixed by switching to
+   a proper ReZero-style scalar gate (Bachlechner et al. 2020) multiplying
+   a normally-initialized update, which gives the same identity-at-init
+   property without blocking gradients.
+2. **A real task-difficulty finding, independent of the bug.** Even after
+   fixing gradient flow, training flatly failed to converge on MODULAR
+   (mod-10, wraparound) arithmetic across 4 composed steps -- loss frozen
+   at exactly ln(10) across 6 seeds and up to 20,000 steps. Switching to
+   SATURATING (clamped, non-wraparound) arithmetic converged to 100%
+   accuracy in about 4,000 steps with no other changes. This matches
+   documented difficulty in the literature around gradient descent and
+   modular arithmetic specifically (the "grokking" line of work, Power et
+   al. 2022) -- worth knowing about as a real property of this problem
+   class, not something to paper over by only reporting the version that
+   worked.
+
+### The actual result, once training worked
+
+Both stepwise logit lens (correlational) and stepwise activation patching
+(causal) recover the model's hidden step-by-step reasoning trace at **100%**
+fidelity, at every one of the 5 recurrence steps -- despite the model never
+being trained to output intermediate values and never emitting them as
+text. This is a cleaner, more complete result than the layer-wise logit
+lens finding on `toy_backdoor.py` (mixed, partial recovery) -- worth noting
+honestly rather than only reporting whichever result looks better, since
+the difference itself is informative: this task's hidden state has to
+encode the running value faithfully and completely for the model to solve
+it at all, whereas `toy_backdoor.py`'s single-shot arithmetic-plus-shift
+task doesn't force that same completeness.
 
 ## Known limitations of the toy organism specifically
 

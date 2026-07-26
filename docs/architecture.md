@@ -18,6 +18,8 @@ flowchart TB
         LENS[logit_lens.py<br/>logit lens + tuned lens]
         PATCH[patching.py<br/>activation patching]
         SAE[sae.py<br/>sparse autoencoder]
+        RECUR[recurrent_reasoner.py<br/>neuralese recurrence organism]
+        RECURDEC[recurrent_decoding.py<br/>stepwise logit lens + patching]
         HFA["hf_adapter.py (scaffold)<br/>same interface, real HF models"]
     end
 
@@ -67,6 +69,8 @@ flowchart TB
     TT --> SAE
     TT --> PROBES
     TOYORG --> TT
+    TENSOR --> RECUR
+    RECUR --> RECURDEC
 
     API --> PERT
     API --> BIAS
@@ -166,3 +170,12 @@ report has its own `.to_markdown()` and is surfaced via
 runs no experiments of its own, only reformats whatever the other modules
 already produced. `audit/pipeline.py::run_full_audit()` is the one place
 all of this actually gets wired into a single call.
+
+`neuralese/recurrent_reasoner.py` and `recurrent_decoding.py` are
+deliberately standalone -- a second organism and a second pair of decoding
+tools, not a replacement for `toy_transformer.py`/`logit_lens.py`/`patching.py`,
+and not wired into `run_full_audit()` at all. Surfaced only via `lumen
+neuralese-recurrence`. Folding it into the main pipeline would have meant
+picking one organism as "the" target for every pillar, which would have
+been a worse choice than just keeping both available for what each is
+actually good at demonstrating.

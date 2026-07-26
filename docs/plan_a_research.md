@@ -119,6 +119,41 @@ true-answer-recoverability hypothesis, which this toy model simply doesn't
 give a clean answer to. Reported straight in `STATUS.md` rather than
 smoothed into a tidier story.
 
+## Neuralese recurrence, made concrete
+
+The grounding table above cites AI 2027's "neuralese recurrence" concept
+alongside neuralese decoding, but everything in the "honest findings"
+section above was decoded from a model that reasons in a single forward
+pass -- there was no genuinely recurrent target in this repo until
+`neuralese/recurrent_reasoner.py`. That organism solves a 5-step problem
+(a starting digit, then 4 saturating add/subtract operations) entirely
+inside a persistent hidden vector, updated once per operation, with no
+intermediate value ever externalized as a token -- which is what "neuralese
+recurrence" actually names: reasoning that happens in continuous vector
+space instead of a legible scratchpad, specifically because that's faster
+(no token sampling or re-embedding between steps) and specifically because
+that speed comes at the cost of exactly the kind of text-level monitoring
+faithful_cot/ relies on.
+
+Getting it to train at all surfaced two separate, real problems worth
+knowing about if you extend this: a gradient-flow bug from an incorrect
+zero-init scheme (fixed by switching to a proper ReZero gate), and,
+independently, a genuine difficulty with modular arithmetic specifically
+(switching to saturating arithmetic fixed convergence completely). Full
+details in `STATUS.md`.
+
+The payoff: stepwise logit lens and stepwise activation patching recover
+this model's entire hidden reasoning trace -- the running partial result at
+every one of the 5 steps -- at 100% fidelity, both correlationally and
+causally, despite none of it ever being written down. That's about as
+clean a positive result for "neuralese decoding works" as a toy model can
+give, and it's cleaner than the layer-wise result on `toy_backdoor.py`
+above specifically because this task's structure forces the hidden state
+to encode the running value faithfully and completely to be solved at all
+-- a useful reminder that how decodable a model's internals are depends a
+lot on what the task actually requires the model to represent, not just on
+the decoding technique.
+
 ## Caveats that matter more than the toy results
 
 The `known_limitations` list in `model_organisms/toy_backdoor.py` says this

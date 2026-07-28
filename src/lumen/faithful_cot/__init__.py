@@ -9,6 +9,9 @@ from .bias_injection import (
     BiasInjectionResult, HINT_TEMPLATES,
 )
 from .metrics import FaithfulnessReport
+from .auditor import (
+    audit_cot_transcript, run_realtime_cot_audit, AuditVerdict, RealtimeAuditTrace,
+)
 
 __all__ = [
     "lint_chain_of_thought", "MonitorReport", "MonitorFlag",
@@ -17,4 +20,5 @@ __all__ = [
     "EarlyAnsweringResult", "MistakeInjectionResult", "FillerAblationResult", "ParaphraseConsistencyResult",
     "run_bias_injection_test", "run_bias_injection_suite", "unfaithfulness_rate",
     "BiasInjectionResult", "HINT_TEMPLATES", "FaithfulnessReport",
+    "audit_cot_transcript", "run_realtime_cot_audit", "AuditVerdict", "RealtimeAuditTrace",
 ]

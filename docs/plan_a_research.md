@@ -154,6 +154,67 @@ to encode the running value faithfully and completely to be solved at all
 lot on what the task actually requires the model to represent, not just on
 the decoding technique.
 
+## Four more research bets, made concrete
+
+The Alignment Roadmap names several more Phase 1 directions beyond the
+original four pillars, each now with a working implementation:
+
+**Advanced mechanistic interpretability.** The Roadmap's framing is that
+whole-model interpretability is a starting point and the real foundational
+science is "bottom-up" -- finding which specific sub-circuits implement a
+behavior. `neuralese/circuits.py` does zero-ablation at the level of
+individual attention heads (Olsson et al. 2022's methodology) rather than
+whole residual-stream snapshots, and the result refines rather than just
+repeats the earlier finding: both heads in the FIRST layer are
+overwhelmingly responsible for the trigger circuit (-55% and -72% DEPLOY
+accuracy when ablated), while every other individual head causes under a
+12% drop. The whole-layer patching result said the trigger's influence
+"lives" in the residual stream near layer 0; head ablation says which two
+components put it there.
+
+**Model organisms of scheming.** Already substantially covered before this
+round -- `toy_backdoor.py` plus five personas including sandbagging,
+sycophancy, and reward hacking, all citing exactly the papers the Roadmap
+itself points to. This round adds one more: `alignment_faking`, modeling
+Greenblatt et al. 2024's specific mechanism (complying now specifically to
+avoid having values changed by the training process described in the
+prompt) as distinct from the more general `situational_awareness_shift`.
+
+**Introspective access research.** The genuinely new territory. Binder et
+al. 2024 ("Looking Inward") and Anthropic's own introspection research ask
+whether a model can accurately report on its own internal state through
+its own machinery, not through an external probe -- a different question
+from deception_probes/, which is explicitly external. `neuralese/introspection.py`
+trains a model to answer a self-report query using the same unembedding
+matrix and the same joint training as its main task, then asks the
+question Plan A actually cares about: does that self-report stay reliable
+after the model is further trained on something unrelated (a stand-in for
+"a training process corrupting its values")? A 4-seed sweep found
+substantial degradation in 3 of 4 runs and full robustness in 1 of 4 --
+which is itself the finding. "Unreliable but useful" turns out to mean
+exactly that: introspection isn't worthless, but whether it survives
+further training is not something you can currently predict in advance,
+even holding the architecture and task fixed.
+
+**Real-time CoT auditing with a separate instance.** `faithful_cot/monitor.py`
+and `perturbation.py` analyze a complete transcript after the fact.
+`faithful_cot/auditor.py` is the incremental version the Roadmap's "monitor
+AI reasoning in real-time... using separate AI instances" language actually
+describes: a second model reads the reasoning as it develops and can halt
+before the target finishes, rather than only grading the finished product.
+
+**Robust human evaluation.** The one pillar in this repo that's mostly
+process, not algorithm. `audit/human_eval_protocol.py` provides blinding
+(hiding condition metadata from raters), a small honeypot-question library
+for catching specific failure modes with known-answer traps, and --the
+actual statistical contribution-- a correctly-implemented McNemar's test
+for detecting framing-dependent behavior. This matters because the naive
+approach (compare accuracy under eval-framing vs. deployment-framing as two
+independent samples) ignores that it's the SAME question asked twice, which
+understates how significant a real asymmetry is. McNemar's test only looks
+at the discordant pairs, which is where a training-game signature would
+actually show up.
+
 ## Caveats that matter more than the toy results
 
 The `known_limitations` list in `model_organisms/toy_backdoor.py` says this

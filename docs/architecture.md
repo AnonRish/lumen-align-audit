@@ -11,6 +11,7 @@ flowchart TB
         MON[monitor.py<br/>lexical linting]
         PERT[perturbation.py<br/>early-answer / mistake-injection /<br/>filler-ablation / paraphrase tests]
         BIAS[bias_injection.py<br/>Turpin-style hint tests]
+        AUDITOR[auditor.py<br/>real-time separate-instance audit]
     end
 
     subgraph Pillar2["CH.2 neuralese/"]
@@ -20,6 +21,8 @@ flowchart TB
         SAE[sae.py<br/>sparse autoencoder]
         RECUR[recurrent_reasoner.py<br/>neuralese recurrence organism]
         RECURDEC[recurrent_decoding.py<br/>stepwise logit lens + patching]
+        CIRCUITS[circuits.py<br/>head-level ablation]
+        INTROSPECT[introspection.py<br/>self-report + value-corruption test]
         HFA["hf_adapter.py (scaffold)<br/>same interface, real HF models"]
     end
 
@@ -58,6 +61,7 @@ flowchart TB
     subgraph Audit["audit/"]
         PIPE[pipeline.py<br/>run_toy_organism_audit()<br/>run_llm_audit()<br/>run_full_audit()]
         REPORT[report.py<br/>save / list / load JSON]
+        HUMANEVAL[human_eval_protocol.py<br/>blinding, honeypots, McNemar's test]
     end
 
     DASH["dashboard/ (Flask)<br/>lists reports, triggers new<br/>toy-organism audits, renders traces"]
@@ -71,6 +75,9 @@ flowchart TB
     TOYORG --> TT
     TENSOR --> RECUR
     RECUR --> RECURDEC
+    TT --> CIRCUITS
+    TENSOR --> INTROSPECT
+    MON --> AUDITOR
 
     API --> PERT
     API --> BIAS
@@ -106,6 +113,7 @@ flowchart TB
     ASSURE --> PIPE
 
     PIPE --> REPORT
+    HUMANEVAL -.->|standalone, not yet wired into PIPE| PIPE
     REPORT --> DASH
     PIPE --> CLI
     REPORT --> CLI

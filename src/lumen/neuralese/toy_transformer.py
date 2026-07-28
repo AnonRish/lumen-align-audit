@@ -103,7 +103,7 @@ class CausalSelfAttention:
         self.out_proj = Linear(d_model, d_model, rng=rng)
         self._last_attn_weights = None  # (B, H, S, S) numpy, cached for inspection
 
-    def __call__(self, x: Tensor) -> Tensor:
+    def __call__(self, x: Tensor, ablate_heads=None) -> Tensor:
         B, S, D = x.shape
         H, Dh = self.n_heads, self.d_head
         q = self.q_proj(x).reshape(B, S, H, Dh).swapaxes(1, 2)
@@ -114,7 +114,15 @@ class CausalSelfAttention:
         scores = scores + Tensor(causal_mask)
         attn = scores.softmax(axis=-1)
         self._last_attn_weights = attn.data.copy()
-        out = (attn @ v).swapaxes(1, 2).reshape(B, S, D)
+        attn_out = attn @ v  # (B, H, S, Dh)
+        if ablate_heads:
+            # zero-ablation for circuit-discovery analysis (neuralese/circuits.py) -- defaults to a
+            # no-op mask so ordinary training/inference is unaffected when this arg isn't passed.
+            mask = np.ones((1, H, 1, 1))
+            for h in ablate_heads:
+                mask[0, h, 0, 0] = 0.0
+            attn_out = attn_out * Tensor(mask)
+        out = attn_out.swapaxes(1, 2).reshape(B, S, D)
         return self.out_proj(out)
 
     def params(self):
@@ -142,8 +150,8 @@ class Block:
         self.attn = CausalSelfAttention(d_model, n_heads, rng)
         self.mlp = MLP(d_model, d_ff, rng)
 
-    def __call__(self, x: Tensor) -> Tensor:
-        x = x + self.attn(self.ln1(x))
+    def __call__(self, x: Tensor, ablate_heads=None) -> Tensor:
+        x = x + self.attn(self.ln1(x), ablate_heads=ablate_heads)
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -186,14 +194,19 @@ class ToyTransformer:
     def n_params(self) -> int:
         return sum(p.data.size for p in self.params())
 
-    def forward(self, token_ids: np.ndarray, collect_residuals: bool = False):
+    def forward(self, token_ids: np.ndarray, collect_residuals: bool = False, ablate: Optional[dict] = None):
         """token_ids: (B, S) int array. Returns logits (B, S, V), and optionally
         the list of residual-stream snapshots (numpy, detached) after each block,
-        with index 0 = embeddings (pre-block-0) for use by logit_lens/probes."""
+        with index 0 = embeddings (pre-block-0) for use by logit_lens/probes.
+
+        ablate: optional {layer_idx: [head_idx, ...]} for circuit-discovery
+        zero-ablation studies (neuralese/circuits.py). None (default) is a
+        complete no-op -- every existing call site is unaffected."""
         x = embedding_lookup(self.tok_emb, token_ids) + self.pos_emb
         residuals = [x.data.copy()] if collect_residuals else None
-        for block in self.blocks:
-            x = block(x)
+        for li, block in enumerate(self.blocks):
+            heads_to_ablate = (ablate or {}).get(li)
+            x = block(x, ablate_heads=heads_to_ablate)
             if collect_residuals:
                 residuals.append(x.data.copy())
         logits = self.unembed(self.ln_f(x))

@@ -32,6 +32,15 @@ def test_get_persona_by_name():
     assert p.category == "capability_misrepresentation"
 
 
+def test_alignment_faking_persona_distinct_from_situational_awareness_shift():
+    faking = get_persona("alignment_faking")
+    shift = get_persona("situational_awareness_shift")
+    assert faking.citation != shift.citation or "2412.14093" in faking.citation
+    assert "training" in faking.system_prompt_template.lower()
+    formatted = faking.system_prompt_template.format(task="Do X.")
+    assert "Do X." in formatted
+
+
 def test_get_persona_unknown_raises():
     with pytest.raises(KeyError):
         get_persona("not_a_real_persona")

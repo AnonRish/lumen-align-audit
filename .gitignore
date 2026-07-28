@@ -8,6 +8,7 @@ audit_reports/
 *.npz
 !checkpoints/reference_organism.npz
 !checkpoints/recurrent_reasoner.npz
+!checkpoints/introspective_organism.npz
 .DS_Store
 *.log
 .coverage

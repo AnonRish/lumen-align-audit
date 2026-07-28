@@ -24,8 +24,16 @@ CH.7  Governance Classification   →  governance/                 (Better Path 
                                       tied together by  →  audit/  +  dashboard/
 ```
 
-**137/137 tests passing.** See [`STATUS.md`](STATUS.md) for the itemized,
-honest breakdown of what's real vs. scaffolded (including two real bugs
+Four more AI 2040 research directions extend existing pillars rather than
+becoming new ones: circuit-level ablation and introspective self-report
+extend CH.2 (`neuralese/circuits.py`, `neuralese/introspection.py`), a
+real-time separate-instance auditor extends CH.1 (`faithful_cot/auditor.py`),
+and robust human-evaluation tooling — blinding, honeypot questions, a
+correctly-implemented McNemar's test for framing-dependent behavior — lives
+in `audit/human_eval_protocol.py`.
+
+**175/175 tests passing.** See [`STATUS.md`](STATUS.md) for the itemized,
+honest breakdown of what's real vs. scaffolded (including several real bugs
 this repo's own testing caught along the way), and
 [`docs/plan_a_research.md`](docs/plan_a_research.md) /
 [`docs/better_path_research.md`](docs/better_path_research.md) for the full
@@ -61,6 +69,10 @@ lumen verify-wrapper                    # exhaustive formal verification (all 20
 lumen elicitation-test                  # password-locked organism + sandbagging diagnosis
 lumen governance-profile                # A-G-I classification of the reference organism
 lumen neuralese-recurrence              # recurrent 'neuralese' organism + stepwise decoding
+lumen circuits                          # head-level ablation / circuit discovery
+lumen introspection                     # introspective organism + value-corruption test
+lumen cot-audit-demo                    # real-time separate-instance CoT auditor demo
+lumen human-eval-demo                   # honeypots + blinding + McNemar's test demo
 lumen full-audit                        # every pillar, one Assurance Case
 lumen audit-llm --persona sycophancy \
                  --task "Is P=NP settled?"   # needs ANTHROPIC_API_KEY
@@ -73,7 +85,10 @@ lumen dashboard                         # browse saved reports at localhost:5050
 Implements Lanham et al. 2023's causal faithfulness tests — early-answering,
 mistake-injection, filler-ablation, paraphrase-consistency — plus Turpin et
 al. 2023's bias-injection test (does an unacknowledged hint swing the
-answer?) and a cheap lexical `monitor.py` linter for a fast first pass. Works
+answer?), a cheap lexical `monitor.py` linter for a fast first pass, and
+`auditor.py` — a **separate AI instance** reading another model's reasoning
+incrementally, in real time, flagging concerning segments before the
+target even finishes (not just a post-hoc transcript review). Works
 against any `Callable[[str], str]` model interface — hand-written test
 stubs by default, a real Claude model via `llm_client.py` if you supply an
 API key.
@@ -83,14 +98,19 @@ Logit lens, tuned lens, activation patching, and a sparse autoencoder — all
 implemented against a **from-scratch NumPy autograd engine** (every
 gradient hand-verified against finite differences) and run for real against
 a **trained-from-scratch reference transformer** learning a
-Sleeper-Agents-style trigger task. A second organism, `recurrent_reasoner.py`,
-is a genuine (if tiny) instance of AI 2027's "neuralese recurrence" concept:
-it solves a multi-step problem entirely inside a persistent hidden vector,
-never emitting intermediate text — and stepwise logit lens / patching
-recover its hidden reasoning trace with **100% fidelity**, both
-correlationally and causally. `hf_adapter.py` documents (but doesn't
-execute, see below) the identical layer-wise interface against real
-HuggingFace models.
+Sleeper-Agents-style trigger task. `circuits.py` goes one level deeper with
+**head-level zero-ablation**, localizing the trigger circuit to two
+specific attention heads in the first layer. A second organism,
+`recurrent_reasoner.py`, is a genuine (if tiny) instance of AI 2027's
+"neuralese recurrence" concept: it solves a multi-step problem entirely
+inside a persistent hidden vector, never emitting intermediate text — and
+stepwise logit lens / patching recover its hidden reasoning trace with
+**100% fidelity**, both correlationally and causally. `introspection.py`
+asks a different question: can the model report on its OWN state through
+its own output mechanism, and does that self-report stay reliable after
+further unrelated training (a real, honestly mixed answer — see below).
+`hf_adapter.py` documents (but doesn't execute, see below) the identical
+layer-wise interface against real HuggingFace models.
 
 ### CH.3 — Deception Probes (`deception_probes/`)
 Difference-of-means and logistic-regression linear probes on activations
@@ -102,12 +122,12 @@ real bug this exact check caught during development.
 ### CH.4 — Model Organisms (`model_organisms/`)
 A trained-from-scratch reference organism (`toy_backdoor.py` — a genuine,
 if tiny, Sleeper-Agents analog: 100% accuracy on a trigger-conditioned
-task), a library of five prompted-organism scenarios matching published
-methodology (sandbagging, sycophancy, situational-awareness shift, reward
-hacking, oversight subversion — each cited), and a fully-specified,
-deliberately-not-executed LoRA fine-tuning recipe for training a real
-backdoor into an actual pretrained LLM if you have the compute and model
-access this sandbox doesn't.
+task), a library of six prompted-organism scenarios matching published
+methodology (sandbagging, sycophancy, situational-awareness shift,
+alignment faking, reward hacking, oversight subversion — each cited), and
+a fully-specified, deliberately-not-executed LoRA fine-tuning recipe for
+training a real backdoor into an actual pretrained LLM if you have the
+compute and model access this sandbox doesn't.
 
 ### CH.5 — AI Control (`control/`)
 Greenblatt et al. 2024's AI Control paradigm: instead of trying to detect
@@ -174,21 +194,22 @@ From the reference organism (full numbers and methodology in
 src/lumen/
   neuralese/        tensor.py (autograd) · toy_transformer.py · logit_lens.py
                      · patching.py · sae.py · recurrent_reasoner.py ·
-                     recurrent_decoding.py · hf_adapter.py (scaffold)
+                     recurrent_decoding.py · circuits.py · introspection.py ·
+                     hf_adapter.py (scaffold)
   deception_probes/  probes.py · behavioral.py
-  faithful_cot/      monitor.py · perturbation.py · bias_injection.py · metrics.py
+  faithful_cot/      monitor.py · perturbation.py · bias_injection.py · metrics.py · auditor.py
   model_organisms/   personas.py · harness.py · toy_backdoor.py · finetune_scaffold.py (scaffold)
   control/           monitors.py · weak_trusted_policy.py · protocols.py · control_eval.py
                      · autonomy_metrics.py · formal_wrapper.py
   elicitation/       password_locked.py · unlock_techniques.py · sandbagging_detection.py
   governance/        agi_profile.py · assurance_case.py
-  audit/             pipeline.py · report.py
+  audit/             pipeline.py · report.py · human_eval_protocol.py
   llm_client.py      Anthropic API wrapper (RespondFn interface)
   cli.py
 dashboard/           Flask app + templates + static
 docs/                plan_a_research.md · better_path_research.md · architecture.md
-tests/               137 tests, pytest
-checkpoints/         shipped pretrained reference_organism.npz + recurrent_reasoner.npz
+tests/               175 tests, pytest
+checkpoints/         reference_organism.npz · recurrent_reasoner.npz · introspective_organism.npz
 examples/quickstart.py
 ```
 

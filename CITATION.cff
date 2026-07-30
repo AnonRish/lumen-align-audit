@@ -1,0 +1,9 @@
+﻿cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Lumen: A Technical Alignment, Interpretability, and Governance Audit Framework"
+authors:
+  - family-names: "<add your last name>"
+    given-names: "Aryan"
+version: 0.1.0
+date-released: "2026-07-29"
+url: "https://github.com/AnonRish/lumen-align-audit"

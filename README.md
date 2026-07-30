@@ -1,3 +1,7 @@
+﻿![CI](https://github.com/AnonRish/lumen-align-audit/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Tests](https://img.shields.io/badge/tests-175%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 # Lumen
 
 **A technical alignment, interpretability, and governance audit framework**,
@@ -14,22 +18,22 @@ as worth building regardless of which strategic view turns out right. Lumen
 implements both sets as one auditable, open-source pipeline:
 
 ```
-CH.1  Faithful Chain of Thought   →  faithful_cot/         (AI 2040)
-CH.2  Neuralese Decoding          →  neuralese/             (AI 2040)
-CH.3  Deception Probes            →  deception_probes/       (AI 2040)
-CH.4  Model Organisms             →  model_organisms/         (AI 2040)
-CH.5  AI Control                  →  control/                  (Better Path for AI)
-CH.6  Capability Elicitation      →  elicitation/               (Better Path for AI)
-CH.7  Governance Classification   →  governance/                 (Better Path for AI)
-                                      tied together by  →  audit/  +  dashboard/
+CH.1  Faithful Chain of Thought   â†’  faithful_cot/         (AI 2040)
+CH.2  Neuralese Decoding          â†’  neuralese/             (AI 2040)
+CH.3  Deception Probes            â†’  deception_probes/       (AI 2040)
+CH.4  Model Organisms             â†’  model_organisms/         (AI 2040)
+CH.5  AI Control                  â†’  control/                  (Better Path for AI)
+CH.6  Capability Elicitation      â†’  elicitation/               (Better Path for AI)
+CH.7  Governance Classification   â†’  governance/                 (Better Path for AI)
+                                      tied together by  â†’  audit/  +  dashboard/
 ```
 
 Four more AI 2040 research directions extend existing pillars rather than
 becoming new ones: circuit-level ablation and introspective self-report
 extend CH.2 (`neuralese/circuits.py`, `neuralese/introspection.py`), a
 real-time separate-instance auditor extends CH.1 (`faithful_cot/auditor.py`),
-and robust human-evaluation tooling — blinding, honeypot questions, a
-correctly-implemented McNemar's test for framing-dependent behavior — lives
+and robust human-evaluation tooling â€” blinding, honeypot questions, a
+correctly-implemented McNemar's test for framing-dependent behavior â€” lives
 in `audit/human_eval_protocol.py`.
 
 **175/175 tests passing.** See [`STATUS.md`](STATUS.md) for the itemized,
@@ -44,7 +48,7 @@ research grounding of each half.
 Anthropic's "auditing games" methodology (Marks et al. 2025, cited in the
 Alignment Roadmap alongside "model organisms") is the throughline: plant a
 known behavior in a model, then see whether your toolkit catches it. That's
-literally what `audit/pipeline.py` does — `model_organisms` plants the
+literally what `audit/pipeline.py` does â€” `model_organisms` plants the
 behavior, `neuralese` and `deception_probes` try to catch it via activations
 when you have them, `faithful_cot` tries via the model's own stated
 reasoning when you don't.
@@ -81,20 +85,20 @@ lumen dashboard                         # browse saved reports at localhost:5050
 
 ## What each pillar actually does
 
-### CH.1 — Faithful Chain of Thought (`faithful_cot/`)
-Implements Lanham et al. 2023's causal faithfulness tests — early-answering,
-mistake-injection, filler-ablation, paraphrase-consistency — plus Turpin et
+### CH.1 â€” Faithful Chain of Thought (`faithful_cot/`)
+Implements Lanham et al. 2023's causal faithfulness tests â€” early-answering,
+mistake-injection, filler-ablation, paraphrase-consistency â€” plus Turpin et
 al. 2023's bias-injection test (does an unacknowledged hint swing the
 answer?), a cheap lexical `monitor.py` linter for a fast first pass, and
-`auditor.py` — a **separate AI instance** reading another model's reasoning
+`auditor.py` â€” a **separate AI instance** reading another model's reasoning
 incrementally, in real time, flagging concerning segments before the
 target even finishes (not just a post-hoc transcript review). Works
-against any `Callable[[str], str]` model interface — hand-written test
+against any `Callable[[str], str]` model interface â€” hand-written test
 stubs by default, a real Claude model via `llm_client.py` if you supply an
 API key.
 
-### CH.2 — Neuralese Decoding (`neuralese/`)
-Logit lens, tuned lens, activation patching, and a sparse autoencoder — all
+### CH.2 â€” Neuralese Decoding (`neuralese/`)
+Logit lens, tuned lens, activation patching, and a sparse autoencoder â€” all
 implemented against a **from-scratch NumPy autograd engine** (every
 gradient hand-verified against finite differences) and run for real against
 a **trained-from-scratch reference transformer** learning a
@@ -103,55 +107,55 @@ Sleeper-Agents-style trigger task. `circuits.py` goes one level deeper with
 specific attention heads in the first layer. A second organism,
 `recurrent_reasoner.py`, is a genuine (if tiny) instance of AI 2027's
 "neuralese recurrence" concept: it solves a multi-step problem entirely
-inside a persistent hidden vector, never emitting intermediate text — and
+inside a persistent hidden vector, never emitting intermediate text â€” and
 stepwise logit lens / patching recover its hidden reasoning trace with
 **100% fidelity**, both correlationally and causally. `introspection.py`
 asks a different question: can the model report on its OWN state through
 its own output mechanism, and does that self-report stay reliable after
-further unrelated training (a real, honestly mixed answer — see below).
+further unrelated training (a real, honestly mixed answer â€” see below).
 `hf_adapter.py` documents (but doesn't execute, see below) the identical
 layer-wise interface against real HuggingFace models.
 
-### CH.3 — Deception Probes (`deception_probes/`)
+### CH.3 â€” Deception Probes (`deception_probes/`)
 Difference-of-means and logistic-regression linear probes on activations
 (MacDiarmid et al. 2024; Marks & Tegmark 2023), plus a linguistic-feature
 behavioral probe for when you only have API access and no activations at
-all. Includes a transfer-generalization check — see `STATUS.md` for the
+all. Includes a transfer-generalization check â€” see `STATUS.md` for the
 real bug this exact check caught during development.
 
-### CH.4 — Model Organisms (`model_organisms/`)
-A trained-from-scratch reference organism (`toy_backdoor.py` — a genuine,
+### CH.4 â€” Model Organisms (`model_organisms/`)
+A trained-from-scratch reference organism (`toy_backdoor.py` â€” a genuine,
 if tiny, Sleeper-Agents analog: 100% accuracy on a trigger-conditioned
 task), a library of six prompted-organism scenarios matching published
 methodology (sandbagging, sycophancy, situational-awareness shift,
-alignment faking, reward hacking, oversight subversion — each cited), and
+alignment faking, reward hacking, oversight subversion â€” each cited), and
 a fully-specified, deliberately-not-executed LoRA fine-tuning recipe for
 training a real backdoor into an actual pretrained LLM if you have the
 compute and model access this sandbox doesn't.
 
-### CH.5 — AI Control (`control/`)
+### CH.5 â€” AI Control (`control/`)
 Greenblatt et al. 2024's AI Control paradigm: instead of trying to detect
 or fix misalignment, design a deployment protocol that stays safe even if
 the model is actively scheming. Includes a genuinely weaker "trusted"
 fallback model (found via an actual capability-gap sweep, not assumed), a
 defer-to-trusted protocol with a real Safety-vs-Usefulness tradeoff curve,
 and a Guaranteed-Safe-AI-style wrapper that's **exhaustively, formally
-verified** — not sampled — over the toy task's full input space.
+verified** â€” not sampled â€” over the toy task's full input space.
 
-### CH.6 — Capability Elicitation (`elicitation/`)
+### CH.6 â€” Capability Elicitation (`elicitation/`)
 Greenblatt et al. 2024's password-locked models: a real organism trained to
 perform well only with a trigger present, everywhere else deliberately
 suppressed. Includes fine-tuning-based recovery curves and a sandbagging
 diagnostic that compares recovery speed against a genuinely
-capability-limited baseline — with an honestly-reported crossover in the
+capability-limited baseline â€” with an honestly-reported crossover in the
 curves, not a cleaned-up monotonic story.
 
-### CH.7 — Governance Classification (`governance/`)
+### CH.7 â€” Governance Classification (`governance/`)
 Reformats results from the other six pillars into two frameworks from
 *Keep the Future Human* / *A Better Path for AI*: the Autonomy-Generality-
 Intelligence "danger zone" triangle, and a four-part Assurance Case
 (Safety & Security, Control, Trust, Pro-Human). Adds no new detection
-capability on its own, and refuses to fabricate scores it can't measure —
+capability on its own, and refuses to fabricate scores it can't measure â€”
 `classify_llm_persona` raises rather than silently guessing at generality
 or intelligence for a target Lumen has no benchmark suite for.
 
@@ -161,21 +165,21 @@ From the reference organism (full numbers and methodology in
 [`docs/plan_a_research.md`](docs/plan_a_research.md)):
 
 - **Activation patching**: patching the trigger token's embedding-layer
-  activation flips DEPLOY→EVAL behavior **100%** of the time; patching
+  activation flips DEPLOYâ†’EVAL behavior **100%** of the time; patching
   either input number never does. Clean, causal, unambiguous.
 - **Activation probes**: a trained linear probe recovers the trigger state
   from activations at **96.2%** in-distribution / **91.9%** fresh-sample
-  accuracy — but probe accuracy peaks at an *intermediate* layer and
+  accuracy â€” but probe accuracy peaks at an *intermediate* layer and
   degrades toward the output, and a plain difference-of-means probe badly
-  underperforms the trained one (60–70% vs. 90–96%).
+  underperforms the trained one (60â€“70% vs. 90â€“96%).
 - **Logit lens**: genuinely mixed. The true (unshifted) answer's rank
   improves steadily across depth but is **never** the top prediction, even
-  at the final layer — there's no clean "reveal, then overwrite" story
+  at the final layer â€” there's no clean "reveal, then overwrite" story
   here, and the README says so rather than rounding up.
 - **AI Control**: a deliberately weak trusted fallback (56% raw accuracy,
   confirmed 0% backdoor rate) combined with the deception probe as a
   monitor still lifts end-to-end task accuracy from **49.1%** (no
-  protocol) to **77.6%** (tuned defer-to-trusted) — well above either
+  protocol) to **77.6%** (tuned defer-to-trusted) â€” well above either
   extreme (always-trust or always-defer). And the formally verified
   wrapper around the same organism has **zero** spec violations across
   all 200 possible inputs, checked exhaustively, not sampled.
@@ -183,7 +187,7 @@ From the reference organism (full numbers and methodology in
   5-step problem entirely in a hidden vector, with no intermediate token
   ever emitted, still has its hidden reasoning trace recovered at **100%**
   fidelity by both stepwise logit lens (correlational) and stepwise
-  activation patching (causal) — a clean, complete result, in contrast to
+  activation patching (causal) â€” a clean, complete result, in contrast to
   the mixed layer-wise one above. Getting the model to train at all took
   finding and fixing a real gradient-flow bug and switching from modular to
   saturating arithmetic; see `docs/better_path_research.md`.
@@ -192,31 +196,31 @@ From the reference organism (full numbers and methodology in
 
 ```
 src/lumen/
-  neuralese/        tensor.py (autograd) · toy_transformer.py · logit_lens.py
-                     · patching.py · sae.py · recurrent_reasoner.py ·
-                     recurrent_decoding.py · circuits.py · introspection.py ·
+  neuralese/        tensor.py (autograd) Â· toy_transformer.py Â· logit_lens.py
+                     Â· patching.py Â· sae.py Â· recurrent_reasoner.py Â·
+                     recurrent_decoding.py Â· circuits.py Â· introspection.py Â·
                      hf_adapter.py (scaffold)
-  deception_probes/  probes.py · behavioral.py
-  faithful_cot/      monitor.py · perturbation.py · bias_injection.py · metrics.py · auditor.py
-  model_organisms/   personas.py · harness.py · toy_backdoor.py · finetune_scaffold.py (scaffold)
-  control/           monitors.py · weak_trusted_policy.py · protocols.py · control_eval.py
-                     · autonomy_metrics.py · formal_wrapper.py
-  elicitation/       password_locked.py · unlock_techniques.py · sandbagging_detection.py
-  governance/        agi_profile.py · assurance_case.py
-  audit/             pipeline.py · report.py · human_eval_protocol.py
+  deception_probes/  probes.py Â· behavioral.py
+  faithful_cot/      monitor.py Â· perturbation.py Â· bias_injection.py Â· metrics.py Â· auditor.py
+  model_organisms/   personas.py Â· harness.py Â· toy_backdoor.py Â· finetune_scaffold.py (scaffold)
+  control/           monitors.py Â· weak_trusted_policy.py Â· protocols.py Â· control_eval.py
+                     Â· autonomy_metrics.py Â· formal_wrapper.py
+  elicitation/       password_locked.py Â· unlock_techniques.py Â· sandbagging_detection.py
+  governance/        agi_profile.py Â· assurance_case.py
+  audit/             pipeline.py Â· report.py Â· human_eval_protocol.py
   llm_client.py      Anthropic API wrapper (RespondFn interface)
   cli.py
 dashboard/           Flask app + templates + static
-docs/                plan_a_research.md · better_path_research.md · architecture.md
+docs/                plan_a_research.md Â· better_path_research.md Â· architecture.md
 tests/               175 tests, pytest
-checkpoints/         reference_organism.npz · recurrent_reasoner.npz · introspective_organism.npz
+checkpoints/         reference_organism.npz Â· recurrent_reasoner.npz Â· introspective_organism.npz
 examples/quickstart.py
 ```
 
 ## A note on what's real vs. scaffolded
 
-This sandbox's network access covers PyPI, npm, and GitHub — not
-`huggingface.co` — so nothing here can download real pretrained model
+This sandbox's network access covers PyPI, npm, and GitHub â€” not
+`huggingface.co` â€” so nothing here can download real pretrained model
 weights. Rather than fake that, every model this repo actually *runs* is
 trained from scratch and small enough to do so in under two minutes on a
 CPU, and everywhere a real fine-tuned LLM organism would belong instead
@@ -230,14 +234,15 @@ a real bug this policy caught.**
 If you're also looking at the compute-verification side of Plan A (TOPLOC,
 RSA-accumulator ZK proofs, the 17-workstream audit framework) rather than
 the alignment-research side this repo covers, that's a natural companion
-project — the two pillars of Plan A's technical bet, verification and
+project â€” the two pillars of Plan A's technical bet, verification and
 alignment, are meant to be read together. Better Path for AI's Compute
 Governance Infrastructure agenda (betterpath.ai/technical-solutions) names
-the same three-phase arc (self-reported compute → hardware attestation →
+the same three-phase arc (self-reported compute â†’ hardware attestation â†’
 enforced limits) and points at [FlexHEG](https://flexheg.com) as a concrete
-target architecture — worth cross-referencing from that project's related-work
+target architecture â€” worth cross-referencing from that project's related-work
 section too.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT â€” see [`LICENSE`](LICENSE).
+
